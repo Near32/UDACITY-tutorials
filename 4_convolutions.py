@@ -10,12 +10,18 @@ pickle_file = 'notMNIST.pickle'
 
 with open(pickle_file, 'rb') as f:
   save = pickle.load(f)
-  train_dataset = save['train_dataset']
-  train_labels = save['train_labels']
-  valid_dataset = save['valid_dataset']
-  valid_labels = save['valid_labels']
-  test_dataset = save['test_dataset']
-  test_labels = save['test_labels']
+  train_dataset = save['train_dataset'][1:20000]
+  train_labels = save['train_labels'][1:20000]
+  valid_dataset = save['valid_dataset'][1:1000]
+  valid_labels = save['valid_labels'][1:1000]
+  test_dataset = save['test_dataset'][1:1000]
+  test_labels = save['test_labels'][1:1000]
+  #train_dataset = save['train_dataset']
+  #train_labels = save['train_labels']
+  #valid_dataset = save['valid_dataset']
+  #valid_labels = save['valid_labels']
+  #test_dataset = save['test_dataset']
+  #test_labels = save['test_labels']
   del save  # hint to help gc free up memory
   print('Training set', train_dataset.shape, train_labels.shape)
   print('Validation set', valid_dataset.shape, valid_labels.shape)
@@ -101,7 +107,17 @@ with graph.as_default():
     tf.nn.softmax_cross_entropy_with_logits(logits, tf_train_labels))
     
   # Optimizer.
-  optimizer = tf.train.GradientDescentOptimizer(0.05).minimize(loss)
+  # Simple :
+  #optimizer = tf.train.GradientDescentOptimizer(0.05).minimize(loss)
+  # With decaying learning rate :
+  starter_learning_rate = 0.05;
+  global_step = tf.Variable(0,trainable=False)
+  decay_steps = 10000
+  decay_rate = 0.90
+  #every decay_steps, the learning_rate is decayed of decay_rate
+  learning_rate = tf.train.exponential_decay(starter_learning_rate, global_step, decay_steps, decay_rate)
+  
+  optimizer = tf.train.GradientDescentOptimizer(learning_rate).minimize(loss, global_step=global_step)
   
   # Predictions for the training, validation, and test data.
   train_prediction = tf.nn.softmax(logits)
@@ -109,7 +125,7 @@ with graph.as_default():
   test_prediction = tf.nn.softmax(model(tf_test_dataset))
   
   
-num_steps = 1001
+num_steps = 10001
 
 with tf.Session(graph=graph) as session:
   tf.initialize_all_variables().run()
@@ -129,4 +145,9 @@ with tf.Session(graph=graph) as session:
   print('Test accuracy: %.1f%%' % accuracy(test_prediction.eval(), test_labels))
   
   
-
+del train_dataset
+del train_labels
+del valid_dataset
+del valid_labels
+del test_dataset
+del test_labels
